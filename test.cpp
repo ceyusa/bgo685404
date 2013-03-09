@@ -5,6 +5,8 @@
 #include "xvwindow.h"
 
 struct xdata {
+	XWindow *xwin;
+	Display *xdisp;
 	GtkWidget *widget;
 	Display *display;
 	Window window;
@@ -18,36 +20,71 @@ struct xdata {
 };
 
 guint test_handler = 0;
+uint8_t *frame = NULL;
 
-static void
-test(bool xv, struct xdata *data)
+static bool
+create_xwindow(bool xv, struct xdata *data)
 {
-	XWindow *win;
+	if (data->xwin)
+		return false;
 
 	if (xv)
-		win = new XVWindow();
+		data->xwin = new XVWindow();
 	else
-		win = new XWindow();
+		data->xwin = new XWindow();
 
-	Display *display = XOpenDisplay(0);
-	g_printerr("opened display %p\n", display);
+	data->xdisp = XOpenDisplay(0);
+	g_printerr("opened display %p\n", data->xdisp);
 
-	if (win->Init(display,
-		      data->window,
-		      data->gc,
-		      data->x,
-		      data->y,
-		      data->ww,
-		      data->wh,
-		      data->iw,
-		      data->ih))
-		g_printerr("%swin init ok!\n", xv ? "xv" : "x");
-	else
-		g_printerr("%swin init failed\n", xv ? "xv" : "x");
+	XWindow *win = data->xwin;
 
-	delete win;
+	return win->Init(data->xdisp,
+			 data->window,
+			 data->gc,
+			 data->x,
+			 data->y,
+			 data->ww,
+			 data->wh,
+			 data->iw,
+			 data->ih);
+}
 
-	XCloseDisplay(display);
+static void
+destroy_xwindow(struct xdata *data)
+{
+	if (data->xwin) {
+		delete data->xwin;
+		data->xwin = 0;
+
+		XCloseDisplay(data->xdisp);
+	}
+}
+
+static gboolean run_tests(gpointer data);
+
+static gboolean
+test(gpointer data)
+{
+	struct xdata *xdata = static_cast<struct xdata*>(data);
+	XWindow *win = xdata->xwin;
+	static guint c = 0;
+
+	win->ProcessEvents();
+
+	if (frame) {
+		g_printerr(".");
+		win->PutFrame(frame, 320, 240);
+	}
+
+	if (c++ <= 150)
+		return TRUE;
+	else {
+		g_printerr("\n");
+		c = 0;
+		test_handler = 0;
+		destroy_xwindow(xdata);
+		return FALSE;
+	}
 }
 
 static gboolean
@@ -56,9 +93,14 @@ run_tests(gpointer data)
 	struct xdata *xdata = static_cast<struct xdata*>(data);
 	static bool xv = false;
 
-	test(xv, xdata);
-	xv = !xv;
+	if (create_xwindow(xv, xdata)) {
+		xv = !xv;
+		g_timeout_add(33, test, xdata);
+		return FALSE;
+	}
 
+	g_printerr("xwin failed\n");
+	destroy_xwindow(xdata);
 	return TRUE;
 }
 
@@ -79,15 +121,15 @@ exposed(GtkWidget *widget, GdkEvent *event, gpointer data)
 	xdata->y = alloc.y;
 	xdata->ww = alloc.width;
 	xdata->wh = alloc.height;
-	xdata->iw = alloc.width;
-	xdata->ih = alloc.height;
+	xdata->iw = 320;
+	xdata->ih = 240;
 
 	g_printerr("widget display %p / %p\n",
 		   GDK_WINDOW_XDISPLAY(gtk_widget_get_window(widget)),
 		   GDK_SCREEN_XDISPLAY(gtk_widget_get_screen(widget)));
 
 	if (test_handler == 0)
-		test_handler = g_timeout_add_seconds(2, run_tests, xdata);
+		test_handler = g_timeout_add_seconds(1, run_tests, xdata);
 
 	return FALSE;
 }
@@ -97,8 +139,7 @@ deleted(GtkWidget *widget, GdkEvent *event, gpointer data)
 {
 	struct xdata *xdata = static_cast<struct xdata*>(data);
 
-	if (xdata->gc && xdata->display)
-		XFreeGC(xdata->display, xdata->gc);
+	XFreeGC(xdata->display, xdata->gc);
 
 	return FALSE;
 }
@@ -111,13 +152,30 @@ quit(GtkWidget *widget, gpointer data)
 		test_handler = G_MAXUINT;
 	}
 
+	if (frame)
+		g_free(frame);
+
 	gtk_main_quit();
+}
+
+static void
+load_frame(const char *filename)
+{
+	if (frame)
+		g_free(frame);
+
+	if (!g_file_get_contents(filename, (gchar **) &frame, NULL, NULL))
+		g_printerr("Can't read frame file: %s", filename);
 }
 
 int main(int argc, char **argv)
 {
 	GtkWidget *window, *button, *image, *box;
 	struct xdata xdata;
+
+	memset(&xdata, 0, sizeof(xdata));
+
+	load_frame("./test.rgb");
 
 	gtk_init(&argc, &argv);
 
