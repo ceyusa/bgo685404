@@ -3,8 +3,8 @@ CFLAGS := $(CXXFLAGS)
 
 override CFLAGS += -Wmissing-prototypes -ansi -std=gnu99 -D_GNU_SOURCE
 
-DEP_CFLAGS := $(shell pkg-config --cflags ptlib x11 xv glib-2.0)
-DEP_LIBS := $(shell pkg-config --libs ptlib x11 xv glib-2.0)
+DEP_CFLAGS := $(shell pkg-config --cflags ptlib x11 xv gtk+-2.0)
+DEP_LIBS := $(shell pkg-config --libs ptlib x11 xv gtk+-2.0)
 
 GLIB_CFLAGS := $(shell pkg-config --cflags glib-2.0)
 
