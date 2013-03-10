@@ -1,0 +1,24 @@
+This is a test app for https://bugzilla.gnome.org/show_bug.cgi?id=685404
+
+The objective is to prove that XWindow/XVWindow classes can be used in GTK3
+with a little X magic.
+
+Compilation for GTK2
+
+$ make
+$ ./test
+
+Compilation for GTK3
+
+$ make GTK=3
+$ ./test
+
+
+Dependencies
+============
+
+* PTLib
+* libX / libXV
+* GTK+ 2/3
+* Boost
+* libstdc++
