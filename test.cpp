@@ -189,7 +189,7 @@ fullscreen(GtkWidget *widget, gpointer data)
 	destroy_xwindow(xdata);
 
 	if (fs) {
-		xdata->window = DefaultRootWindow (xdata->xdisp);
+		xdata->window = DefaultRootWindow (XOpenDisplay(0));
 		xdata->gc = NULL;
 		xdata->x = 0;
 		xdata->y = 0;
