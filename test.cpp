@@ -19,6 +19,12 @@ struct xdata {
 	int ih;
 };
 
+const char* formats[] = {
+	"GBR", "GBR_10LE", "GBR_10BE",
+	"RGBx", "BGRx", "xRGB", "xBGR", "RGBA", "BGRA", "ARGB",
+	"ABGR", "RGB", "BGR", "RGB16", "BGR16", "RGB15", "BGR15"
+};
+
 guint test_handler = 0;
 uint8_t *frame = NULL;
 
@@ -61,6 +67,7 @@ destroy_xwindow(struct xdata *data)
 }
 
 static gboolean run_tests(gpointer data);
+static void load_frame(const char *filename);
 
 static gboolean
 test(gpointer data)
@@ -92,6 +99,16 @@ run_tests(gpointer data)
 {
 	struct xdata *xdata = static_cast<struct xdata*>(data);
 	static bool xv = false;
+	static int i = 0;
+
+	char *filename = g_strconcat(formats[i++ % G_N_ELEMENTS(formats)],
+				     ".rgb", NULL);
+	load_frame(filename);
+
+	if (frame)
+		g_printerr("frame loaded: %s\n", filename);
+
+	g_free(filename);
 
 	if (create_xwindow(xv, xdata)) {
 		xv = !xv;
@@ -174,8 +191,6 @@ int main(int argc, char **argv)
 	struct xdata xdata;
 
 	memset(&xdata, 0, sizeof(xdata));
-
-	load_frame("./test.rgb");
 
 	gtk_init(&argc, &argv);
 
