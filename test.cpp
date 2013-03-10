@@ -27,6 +27,7 @@ const char* formats[] = {
 
 guint test_handler = 0;
 uint8_t *frame = NULL;
+bool fs = false;
 
 static bool
 create_xwindow(bool xv, struct xdata *data)
@@ -176,6 +177,30 @@ quit(GtkWidget *widget, gpointer data)
 }
 
 static void
+fullscreen(GtkWidget *widget, gpointer data)
+{
+	struct xdata *xdata = static_cast<struct xdata*>(data);
+
+	XWindow *win = xdata->xwin;
+	if (!win)
+		return;
+
+	fs = !fs;
+	destroy_xwindow(xdata);
+
+	if (fs) {
+		xdata->window = DefaultRootWindow (xdata->xdisp);
+		xdata->gc = NULL;
+		xdata->x = 0;
+		xdata->y = 0;
+	}
+
+	if (create_xwindow(true, xdata))
+		xdata->xwin->ToggleFullscreen();
+}
+
+
+static void
 load_frame(const char *filename)
 {
 	if (frame)
@@ -187,7 +212,7 @@ load_frame(const char *filename)
 
 int main(int argc, char **argv)
 {
-	GtkWidget *window, *button, *image, *box;
+	GtkWidget *window, *button, *image, *box, *fs;
 	struct xdata xdata;
 
 	memset(&xdata, 0, sizeof(xdata));
@@ -196,6 +221,7 @@ int main(int argc, char **argv)
 
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	button = gtk_button_new_from_stock(GTK_STOCK_QUIT);
+	fs = gtk_button_new_from_stock(GTK_STOCK_FULLSCREEN);
 	xdata.widget = image = gtk_image_new();
 
 #ifdef GTK3
@@ -206,6 +232,7 @@ int main(int argc, char **argv)
 
 	gtk_container_add(GTK_CONTAINER(window), box);
 	gtk_box_pack_start(GTK_BOX(box), button, FALSE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(box), fs, FALSE, TRUE, 0);
 	gtk_box_pack_end(GTK_BOX(box), image, TRUE, TRUE, 0);
 
 #ifdef GTK3
@@ -216,6 +243,7 @@ int main(int argc, char **argv)
 
 	g_signal_connect(image, "delete-event", G_CALLBACK(deleted), &xdata);
 	g_signal_connect(button, "clicked", G_CALLBACK(quit), &xdata);
+	g_signal_connect(fs, "clicked", G_CALLBACK(fullscreen), &xdata);
 
 	gtk_widget_show_all(window);
 
