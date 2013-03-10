@@ -197,13 +197,23 @@ int main(int argc, char **argv)
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	button = gtk_button_new_from_stock(GTK_STOCK_QUIT);
 	xdata.widget = image = gtk_image_new();
+
+#ifdef GTK3
+	box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 3);
+#else
 	box = gtk_vbox_new(FALSE, 3);
+#endif
 
 	gtk_container_add(GTK_CONTAINER(window), box);
 	gtk_box_pack_start(GTK_BOX(box), button, FALSE, TRUE, 0);
 	gtk_box_pack_end(GTK_BOX(box), image, TRUE, TRUE, 0);
 
+#ifdef GTK3
+	g_signal_connect(window, "event", G_CALLBACK(exposed), &xdata);
+#else
 	g_signal_connect(window, "expose-event", G_CALLBACK(exposed), &xdata);
+#endif
+
 	g_signal_connect(image, "delete-event", G_CALLBACK(deleted), &xdata);
 	g_signal_connect(button, "clicked", G_CALLBACK(quit), &xdata);
 
